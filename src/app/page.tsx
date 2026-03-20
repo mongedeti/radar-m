@@ -102,7 +102,7 @@ export default function Home() {
           <br />
 
           <Link href="/signup" className="btn-outline-light">
-            Criar conta gratuita
+            Criar conta
           </Link>
 
         </div>

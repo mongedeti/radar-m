@@ -2,92 +2,65 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
 
-  const router = useRouter()
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
 
-  async function handleLogin(e: React.FormEvent) {
-
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError('')
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     })
 
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-      return
+    if (!error) {
+      window.location.href = '/dashboard'
+    } else {
+      alert('Erro ao fazer login')
     }
-
-    router.push('/dashboard')
   }
 
   return (
+    <div className="auth-container">
 
-    <div className="flex items-center justify-center min-h-screen">
+      <div className="auth-card">
 
-      <form
-        onSubmit={handleLogin}
-        className="border p-6 rounded w-full max-w-sm space-y-4"
-      >
+        <div className="auth-title">Radar M</div>
+        <div className="auth-subtitle">
+          Acesse sua conta
+        </div>
 
-        <h1 className="text-xl font-semibold">
-          Login
-        </h1>
+        <form onSubmit={handleLogin}>
 
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full border p-2"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
+          <input
+            className="auth-input"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-        <input
-          type="password"
-          placeholder="Senha"
-          className="w-full border p-2"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
+          <input
+            className="auth-input"
+            type="password"
+            placeholder="Senha"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-        {error && (
-          <p className="text-red-500 text-sm">
-            {error}
-          </p>
-        )}
+          <button className="auth-button">
+            Entrar
+          </button>
 
-        <button
-          className="w-full bg-blue-600 text-white p-2 rounded"
-          disabled={loading}
-        >
-          {loading ? 'Entrando...' : 'Entrar'}
-        </button>
+        </form>
 
-        <p className="text-sm text-center">
-          Não tem conta?{' '}
-          <a
-            href="/signup"
-            className="text-blue-600"
-          >
-            Criar conta
-          </a>
-        </p>
+        <div className="auth-footer">
+          Não tem conta? <a href="/signup">Criar conta</a>
+        </div>
 
-      </form>
+      </div>
 
     </div>
   )
