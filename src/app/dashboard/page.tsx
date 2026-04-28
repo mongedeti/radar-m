@@ -212,9 +212,9 @@ export default function Dashboard() {
                 <div>
                   <strong>{item.equipments[0]?.name}</strong>
 
-                  {item.equipments.location && (
+                  {item.equipments[0]?.location && (
                     <div style={{ fontSize: 12, opacity: 0.7 }}>
-                      {item.equipments.location}
+                      {item.equipments[0]?.location}
                     </div>
                   )}
                 </div>
@@ -254,9 +254,9 @@ export default function Dashboard() {
                 <div>
                   <strong>{item.equipments[0]?.name}</strong>
 
-                  {item.equipments.location && (
+                  {item.equipments[0]?.location && (
                     <div style={{ fontSize: 12, opacity: 0.7 }}>
-                      {item.equipments.location}
+                      {item.equipments[0]?.location}
                     </div>
                   )}
                 </div>
