@@ -210,7 +210,7 @@ export default function Dashboard() {
               <li key={item.id} className="client-card">
 
                 <div>
-                  <strong>{item.equipments.name}</strong>
+                  <strong>{item.equipments[0]?.name}</strong>
 
                   {item.equipments.location && (
                     <div style={{ fontSize: 12, opacity: 0.7 }}>
@@ -252,7 +252,7 @@ export default function Dashboard() {
               <li key={item.id} className="client-card">
 
                 <div>
-                  <strong>{item.equipments.name}</strong>
+                  <strong>{item.equipments[0]?.name}</strong>
 
                   {item.equipments.location && (
                     <div style={{ fontSize: 12, opacity: 0.7 }}>
