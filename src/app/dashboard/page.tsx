@@ -16,7 +16,7 @@ type MaintenanceItem = {
   equipments: {
     name: string
     location: string | null
-  }
+  }[]
 }
 
 function formatDate(dateString: string) {
