@@ -41,33 +41,37 @@ export default function EquipmentsPage() {
     setLoading(false)
   }
 
-  async function handleAddEquipment(e: React.FormEvent) {
-    e.preventDefault()
+async function handleAddEquipment(e: React.FormEvent) {
+  e.preventDefault()
 
-    if (!name) return
+  if (!name) return
 
-    const { data, error } = await supabase
-      .from('equipments')
-      .insert([
-        {
-          name,
-          location
-        }
-      ])
-      .select()
+  const { data: userData } = await supabase.auth.getUser()
 
-    if (error) {
-      console.error(error)
-      return
-    }
+  const { data, error } = await supabase
+    .from('equipments')
+    .insert([
+      {
+        name,
+        location,
+        user_id: userData.user?.id
+      }
+    ])
+    .select()
 
-    if (data) {
-      setEquipments(prev => [...data, ...prev])
-    }
-
-    setName('')
-    setLocation('')
+  if (error) {
+    console.error(error)
+    alert(error.message) // 👈 importante pra debug
+    return
   }
+
+  if (data) {
+    setEquipments(prev => [...data, ...prev])
+  }
+
+  setName('')
+  setLocation('')
+}
 
   if (loading) {
     return <div className="container">Carregando...</div>
