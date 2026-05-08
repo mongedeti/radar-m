@@ -75,6 +75,16 @@ export default function NewEquipment() {
 
     <div className="max-w-xl">
 
+      {/* BOTÃO VOLTAR */}
+      <div style={{ marginBottom: 20 }}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => router.push('/dashboard')}
+        >
+          ← Dashboard
+        </button>
+      </div>
+
       <h1 className="text-2xl font-semibold mb-6">
         Novo Equipamento
       </h1>
