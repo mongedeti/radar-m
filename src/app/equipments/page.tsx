@@ -80,6 +80,16 @@ async function handleAddEquipment(e: React.FormEvent) {
   return (
     <div className="container">
 
+      {/* BOTÃO VOLTAR */}
+      <div style={{ marginBottom: 20 }}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => router.push('/dashboard')}
+        >
+          ← Dashboard
+        </button>
+      </div>
+
       <h1 className="page-title">Equipamentos</h1>
 
       <p style={{ marginBottom: 24, opacity: 0.7 }}>
