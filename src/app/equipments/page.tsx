@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
 type Equipment = {
@@ -11,6 +12,8 @@ type Equipment = {
 }
 
 export default function EquipmentsPage() {
+
+  const router = useRouter()
 
   const [equipments, setEquipments] = useState<Equipment[]>([])
   const [name, setName] = useState('')
@@ -41,37 +44,37 @@ export default function EquipmentsPage() {
     setLoading(false)
   }
 
-async function handleAddEquipment(e: React.FormEvent) {
-  e.preventDefault()
+  async function handleAddEquipment(e: React.FormEvent) {
+    e.preventDefault()
 
-  if (!name) return
+    if (!name) return
 
-  const { data: userData } = await supabase.auth.getUser()
+    const { data: userData } = await supabase.auth.getUser()
 
-  const { data, error } = await supabase
-    .from('equipments')
-    .insert([
-      {
-        name,
-        location,
-        user_id: userData.user?.id
-      }
-    ])
-    .select()
+    const { data, error } = await supabase
+      .from('equipments')
+      .insert([
+        {
+          name,
+          location,
+          user_id: userData.user?.id
+        }
+      ])
+      .select()
 
-  if (error) {
-    console.error(error)
-    alert(error.message) // 👈 importante pra debug
-    return
+    if (error) {
+      console.error(error)
+      alert(error.message)
+      return
+    }
+
+    if (data) {
+      setEquipments(prev => [...data, ...prev])
+    }
+
+    setName('')
+    setLocation('')
   }
-
-  if (data) {
-    setEquipments(prev => [...data, ...prev])
-  }
-
-  setName('')
-  setLocation('')
-}
 
   if (loading) {
     return <div className="container">Carregando...</div>
@@ -80,15 +83,20 @@ async function handleAddEquipment(e: React.FormEvent) {
   return (
     <div className="container">
 
-      {/* BOTÃO VOLTAR */}
-      <div style={{ marginBottom: 20 }}>
+      {/* TOPO */}
+
+      <div className="page-header">
+
         <button
           className="btn btn-secondary"
           onClick={() => router.push('/dashboard')}
         >
           ← Dashboard
         </button>
+
       </div>
+
+      {/* TÍTULO */}
 
       <h1 className="page-title">Equipamentos</h1>
 
@@ -122,7 +130,10 @@ async function handleAddEquipment(e: React.FormEvent) {
           style={{ padding: 8 }}
         />
 
-        <button className="btn btn-primary">
+        <button
+          type="submit"
+          className="btn btn-primary"
+        >
           Adicionar
         </button>
 
@@ -134,16 +145,27 @@ async function handleAddEquipment(e: React.FormEvent) {
 
         {equipments.map(equipment => (
 
-          <li key={equipment.id} className="client-card">
+          <li
+            key={equipment.id}
+            className="client-card"
+          >
 
             <div>
+
               <strong>{equipment.name}</strong>
 
               {equipment.location && (
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    opacity: 0.7,
+                    marginTop: 4
+                  }}
+                >
                   {equipment.location}
                 </div>
               )}
+
             </div>
 
           </li>
