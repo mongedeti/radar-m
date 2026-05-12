@@ -7,19 +7,14 @@ type Equipment = {
   id: string
   name: string
   location: string | null
+  maintenance_interval_months: number
+  last_maintenance_at: string | null
   created_at: string
 }
 
-type MaintenanceItem = {
-  id: string
-  next_maintenance: string
-  equipments: {
-    name: string
-    location: string | null
-  }[]
-}
+function formatDate(dateString: string | null) {
+  if (!dateString) return 'Nenhuma manutenção registrada'
 
-function formatDate(dateString: string) {
   const date = new Date(dateString)
 
   return date.toLocaleDateString('pt-BR', {
@@ -29,12 +24,65 @@ function formatDate(dateString: string) {
   })
 }
 
+function getNextMaintenanceDate(
+  lastMaintenance: string | null,
+  intervalMonths: number
+) {
+  if (!lastMaintenance) return null
+
+  const date = new Date(lastMaintenance)
+
+  date.setMonth(date.getMonth() + intervalMonths)
+
+  return date
+}
+
+function getMaintenanceStatus(
+  lastMaintenance: string | null,
+  intervalMonths: number
+) {
+  if (!lastMaintenance) return 'risco'
+
+  const nextMaintenance = getNextMaintenanceDate(
+    lastMaintenance,
+    intervalMonths
+  )
+
+  if (!nextMaintenance) return 'risco'
+
+  const today = new Date()
+
+  const diff =
+    (nextMaintenance.getTime() - today.getTime()) /
+    (1000 * 60 * 60 * 24)
+
+  if (diff < 0) return 'risco'
+
+  if (diff <= 7) return 'atenção'
+
+  return 'saudável'
+}
+
+function getPriorityScore(
+  lastMaintenance: string | null,
+  intervalMonths: number
+) {
+  const status = getMaintenanceStatus(
+    lastMaintenance,
+    intervalMonths
+  )
+
+  if (status === 'risco') return 0
+  if (status === 'atenção') return 1
+
+  return 2
+}
+
 export default function Dashboard() {
 
-  const [equipmentsCount, setEquipmentsCount] = useState(0)
-  const [overdue, setOverdue] = useState<MaintenanceItem[]>([])
-  const [upcoming, setUpcoming] = useState<MaintenanceItem[]>([])
+  const [equipments, setEquipments] = useState<Equipment[]>([])
   const [loading, setLoading] = useState(true)
+  const [showOnlyRisk, setShowOnlyRisk] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
   const handleLogout = async () => {
@@ -54,54 +102,117 @@ export default function Dashboard() {
 
     setUserEmail(userData.user.email ?? null)
 
-    const today = new Date()
-
-    // total equipamentos
-    const { count } = await supabase
+    const { data, error } = await supabase
       .from('equipments')
-      .select('*', { count: 'exact', head: true })
+      .select('*')
+      .order('created_at', { ascending: false })
 
-    if (count) setEquipmentsCount(count)
+    if (error) {
+      console.error(error)
+      setLoading(false)
+      return
+    }
 
-    // manutenções
-	const { data, error } = await supabase
-	  .from('maintenance_plans')
-	  .select(`
-		id,
-		next_maintenance,
-		equipments (
-		  name,
-		  location
-		)
-	  `)
-
-	if (error) {
-	  console.error(error)
-	  setLoading(false)
-	  return
-	}
-
-    if (!data) return
-
-    const overdueList = data.filter(item =>
-      new Date(item.next_maintenance) < today
-    )
-
-    const upcomingList = data.filter(item => {
-
-      const next = new Date(item.next_maintenance)
-      const diff = (next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-
-      return diff >= 0 && diff <= 7
-    })
-
-    setOverdue(overdueList)
-    setUpcoming(upcomingList)
+    if (data) {
+      setEquipments(data)
+    }
 
     setLoading(false)
   }
 
-  if (loading) return <div className="container">Carregando...</div>
+  async function handleRegisterMaintenance(
+    equipmentId: string
+  ) {
+
+    const now = new Date().toISOString()
+
+    const { error } = await supabase
+      .from('equipments')
+      .update({
+        last_maintenance_at: now
+      })
+      .eq('id', equipmentId)
+
+    if (!error) {
+
+      setEquipments(prev =>
+        prev.map(eq =>
+          eq.id === equipmentId
+            ? {
+                ...eq,
+                last_maintenance_at: now
+              }
+            : eq
+        )
+      )
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container">
+        Carregando...
+      </div>
+    )
+  }
+
+  const risco = equipments.filter(
+    e =>
+      getMaintenanceStatus(
+        e.last_maintenance_at,
+        e.maintenance_interval_months
+      ) === 'risco'
+  ).length
+
+  const atencao = equipments.filter(
+    e =>
+      getMaintenanceStatus(
+        e.last_maintenance_at,
+        e.maintenance_interval_months
+      ) === 'atenção'
+  ).length
+
+  const saudavel = equipments.filter(
+    e =>
+      getMaintenanceStatus(
+        e.last_maintenance_at,
+        e.maintenance_interval_months
+      ) === 'saudável'
+  ).length
+
+  const sortedEquipments = [...equipments].sort(
+    (a, b) => {
+
+      const priorityDiff =
+        getPriorityScore(
+          a.last_maintenance_at,
+          a.maintenance_interval_months
+        ) -
+        getPriorityScore(
+          b.last_maintenance_at,
+          b.maintenance_interval_months
+        )
+
+      if (priorityDiff !== 0) {
+        return priorityDiff
+      }
+
+      return (
+        new Date(b.created_at).getTime() -
+        new Date(a.created_at).getTime()
+      )
+    }
+  )
+
+  const filteredEquipments = showOnlyRisk
+    ? sortedEquipments.filter(
+        e =>
+          getMaintenanceStatus(
+            e.last_maintenance_at,
+            e.maintenance_interval_months
+          ) === 'risco'
+      )
+    : sortedEquipments
 
   return (
     <div className="container">
@@ -111,12 +222,23 @@ export default function Dashboard() {
       <div className="page-header">
 
         <div>
-          <h1 className="page-title">Radar M</h1>
-          <div className="user-info">Painel de Manutenção</div>
+          <h1 className="page-title">
+            Radar M
+          </h1>
+
+          <div className="user-info">
+            Painel de manutenção
+          </div>
         </div>
 
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 12, marginBottom: 6 }}>
+
+          <div
+            style={{
+              fontSize: 12,
+              marginBottom: 6
+            }}
+          >
             {userEmail}
           </div>
 
@@ -126,24 +248,30 @@ export default function Dashboard() {
           >
             Sair
           </button>
+
         </div>
 
       </div>
 
-      {/* FRASE DE IMPACTO */}
+      {/* FRASE */}
 
       <div style={{ marginBottom: 24 }}>
+
         <h2 style={{ marginBottom: 6 }}>
-          Equipamentos bem mantidos evitam problemas.
+          Equipamentos bem mantidos evitam prejuízos.
         </h2>
+
         <p style={{ opacity: 0.7 }}>
-          O Radar M mostra quais manutenções precisam de atenção agora.
+          O Radar M mostra quais equipamentos
+          precisam de manutenção antes do problema acontecer.
         </p>
+
       </div>
 
       {/* ALERTA */}
 
-      {overdue.length > 0 && (
+      {risco > 0 && (
+
         <div
           style={{
             background: '#ffe5e5',
@@ -154,130 +282,231 @@ export default function Dashboard() {
             fontWeight: 500,
           }}
         >
-          ⚠️ Você tem {overdue.length} manutenção(ões) atrasadas.
+          ⚠️ Você possui {risco} equipamento(s)
+          em risco de manutenção atrasada.
         </div>
+
       )}
 
       {/* BOTÃO */}
 
       <div style={{ marginBottom: 24 }}>
+
         <a href="/equipments">
+
           <button className="btn btn-primary">
             + Adicionar Equipamento
           </button>
+
         </a>
+
       </div>
 
       {/* MÉTRICAS */}
 
       <div className="metrics-grid">
 
-        <div className="metric-card metric-info">
-          <div className="metric-title">
-            Equipamentos
-          </div>
-          <div className="metric-value">{equipmentsCount}</div>
-        </div>
-
         <div className="metric-card metric-risk">
+
           <div className="metric-title">
-            Atrasadas
+
+            <span className="metric-dot dot-risk"></span>
+
+            Em Risco
+
           </div>
-          <div className="metric-value">{overdue.length}</div>
+
+          <div className="metric-value">
+            {risco}
+          </div>
+
         </div>
 
         <div className="metric-card metric-warning">
+
           <div className="metric-title">
-            Próximas
+
+            <span className="metric-dot dot-warning"></span>
+
+            Atenção
+
           </div>
-          <div className="metric-value">{upcoming.length}</div>
+
+          <div className="metric-value">
+            {atencao}
+          </div>
+
+        </div>
+
+        <div className="metric-card metric-healthy">
+
+          <div className="metric-title">
+
+            <span className="metric-dot dot-healthy"></span>
+
+            Saudáveis
+
+          </div>
+
+          <div className="metric-value">
+            {saudavel}
+          </div>
+
+        </div>
+
+        <div className="metric-card metric-info">
+
+          <div className="metric-title">
+
+            <span className="metric-dot dot-info"></span>
+
+            Equipamentos
+
+          </div>
+
+          <div className="metric-value">
+            {equipments.length}
+          </div>
+
         </div>
 
       </div>
 
-      {/* MANUTENÇÕES ATRASADAS */}
+      {/* FILTRO */}
 
-      {overdue.length > 0 && (
-        <>
-          <h3 style={{ marginTop: 40, marginBottom: 16 }}>
-            🔴 Manutenções atrasadas
-          </h3>
+      <div style={{ marginBottom: 20 }}>
 
-          <ul className="client-list">
+        <button
+          onClick={() =>
+            setShowOnlyRisk(!showOnlyRisk)
+          }
+          className={`btn ${
+            showOnlyRisk
+              ? 'btn-danger'
+              : 'btn-secondary'
+          }`}
+        >
+          {showOnlyRisk
+            ? 'Mostrando apenas equipamentos em risco'
+            : 'Mostrar apenas equipamentos em risco'}
+        </button>
 
-            {overdue.map(item => (
+      </div>
 
-              <li key={item.id} className="client-card">
+      {/* LISTA */}
 
-                <div>
-                  <strong>{item.equipments[0]?.name}</strong>
+      <ul className="client-list">
 
-                  {item.equipments[0]?.location && (
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>
-                      {item.equipments[0]?.location}
-                    </div>
+        {filteredEquipments.map(equipment => {
+
+          const status = getMaintenanceStatus(
+            equipment.last_maintenance_at,
+            equipment.maintenance_interval_months
+          )
+
+          const badgeClass =
+            status === 'risco'
+              ? 'badge badge-risk'
+              : status === 'atenção'
+              ? 'badge badge-warning'
+              : 'badge badge-healthy'
+
+          const nextMaintenance =
+            getNextMaintenanceDate(
+              equipment.last_maintenance_at,
+              equipment.maintenance_interval_months
+            )
+
+          return (
+
+            <li
+              key={equipment.id}
+              className="client-card"
+            >
+
+              <div>
+
+                <strong>
+                  {equipment.name}
+                </strong>
+
+                {equipment.location && (
+
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 12,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {equipment.location}
+                  </div>
+
+                )}
+
+                <div style={{ marginTop: 6 }}>
+
+                  <span className={badgeClass}>
+                    {status.toUpperCase()}
+                  </span>
+
+                </div>
+
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+
+                <button
+                  onClick={() =>
+                    handleRegisterMaintenance(
+                      equipment.id
+                    )
+                  }
+                  className="btn btn-primary"
+                >
+                  Registrar manutenção
+                </button>
+
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 12,
+                    opacity: 0.7,
+                  }}
+                >
+                  Última manutenção:
+                  {' '}
+                  {formatDate(
+                    equipment.last_maintenance_at
                   )}
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <span className="badge badge-risk">
-                    ATRASADO
-                  </span>
+                {nextMaintenance && (
 
-                  <div style={{ fontSize: 12, marginTop: 6 }}>
-                    {formatDate(item.next_maintenance)}
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 12,
+                      opacity: 0.7,
+                    }}
+                  >
+                    Próxima revisão:
+                    {' '}
+                    {formatDate(
+                      nextMaintenance.toISOString()
+                    )}
                   </div>
-                </div>
 
-              </li>
+                )}
 
-            ))}
+              </div>
 
-          </ul>
-        </>
-      )}
+            </li>
 
-      {/* MANUTENÇÕES PRÓXIMAS */}
+          )
+        })}
 
-      {upcoming.length > 0 && (
-        <>
-          <h3 style={{ marginTop: 40, marginBottom: 16 }}>
-            🟡 Próximas manutenções
-          </h3>
-
-          <ul className="client-list">
-
-            {upcoming.map(item => (
-
-              <li key={item.id} className="client-card">
-
-                <div>
-                  <strong>{item.equipments[0]?.name}</strong>
-
-                  {item.equipments[0]?.location && (
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>
-                      {item.equipments[0]?.location}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span className="badge badge-warning">
-                    EM BREVE
-                  </span>
-
-                  <div style={{ fontSize: 12, marginTop: 6 }}>
-                    {formatDate(item.next_maintenance)}
-                  </div>
-                </div>
-
-              </li>
-
-            ))}
-
-          </ul>
-        </>
-      )}
+      </ul>
 
     </div>
   )
