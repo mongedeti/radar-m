@@ -8,6 +8,7 @@ type Equipment = {
   id: string
   name: string
   location: string | null
+  maintenance_interval_months: number
   created_at: string
 }
 
@@ -16,8 +17,11 @@ export default function EquipmentsPage() {
   const router = useRouter()
 
   const [equipments, setEquipments] = useState<Equipment[]>([])
+
   const [name, setName] = useState('')
   const [location, setLocation] = useState('')
+  const [interval, setInterval] = useState('3')
+
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -45,6 +49,7 @@ export default function EquipmentsPage() {
   }
 
   async function handleAddEquipment(e: React.FormEvent) {
+
     e.preventDefault()
 
     if (!name) return
@@ -57,6 +62,7 @@ export default function EquipmentsPage() {
         {
           name,
           location,
+          maintenance_interval_months: Number(interval),
           user_id: userData.user?.id
         }
       ])
@@ -74,6 +80,30 @@ export default function EquipmentsPage() {
 
     setName('')
     setLocation('')
+    setInterval('3')
+  }
+
+  function getIntervalLabel(months: number) {
+
+    switch (months) {
+      case 1:
+        return 'Mensal'
+
+      case 2:
+        return 'Bimestral'
+
+      case 3:
+        return 'Trimestral'
+
+      case 6:
+        return 'Semestral'
+
+      case 12:
+        return 'Anual'
+
+      default:
+        return `${months} meses`
+    }
   }
 
   if (loading) {
@@ -101,7 +131,7 @@ export default function EquipmentsPage() {
       <h1 className="page-title">Equipamentos</h1>
 
       <p style={{ marginBottom: 24, opacity: 0.7 }}>
-        Cadastre e acompanhe os equipamentos que precisam de manutenção.
+        Cadastre e acompanhe os equipamentos que precisam de manutenção preventiva.
       </p>
 
       {/* FORM */}
@@ -129,6 +159,20 @@ export default function EquipmentsPage() {
           onChange={(e) => setLocation(e.target.value)}
           style={{ padding: 8 }}
         />
+
+        <select
+          value={interval}
+          onChange={(e) => setInterval(e.target.value)}
+          style={{ padding: 8 }}
+        >
+
+          <option value="1">Mensal</option>
+          <option value="2">Bimestral</option>
+          <option value="3">Trimestral</option>
+          <option value="6">Semestral</option>
+          <option value="12">Anual</option>
+
+        </select>
 
         <button
           type="submit"
@@ -162,9 +206,19 @@ export default function EquipmentsPage() {
                     marginTop: 4
                   }}
                 >
-                  {equipment.location}
+                  📍 {equipment.location}
                 </div>
               )}
+
+              <div
+                style={{
+                  fontSize: 12,
+                  opacity: 0.7,
+                  marginTop: 4
+                }}
+              >
+                🔧 Revisão {getIntervalLabel(equipment.maintenance_interval_months)}
+              </div>
 
             </div>
 
