@@ -29,6 +29,13 @@ export default function Home() {
             manutenções de equipamentos e evitar problemas antes que eles aconteçam.
           </p>
 
+          <Link
+            href="/signup"
+            className="btn-primary-large"
+          >
+            Começar agora
+          </Link>
+
           {/* PREÇO */}
           <p
             style={{
@@ -40,13 +47,6 @@ export default function Home() {
             30 dias grátis.
             Depois apenas <strong>R$ 9,90/mês</strong>.
           </p>
-
-          <Link
-            href="/signup"
-            className="btn-primary-large"
-          >
-            Começar agora
-          </Link>
 
         </div>
 
