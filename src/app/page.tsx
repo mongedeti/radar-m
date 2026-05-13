@@ -44,8 +44,7 @@ export default function Home() {
               fontSize: 15,
             }}
           >
-            30 dias grátis.
-            Depois apenas <strong>R$ 9,90/mês</strong>.
+            30 dias grátis • depois apenas R$ 9,90/mês
           </p>
 
         </div>
