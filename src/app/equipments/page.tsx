@@ -12,6 +12,34 @@ type Equipment = {
   created_at: string
 }
 
+function sanitizeInput(value: string) {
+
+  return value
+    .replace(/[^\p{L}\p{N}\s\-.,()/]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function isValidInput(value: string) {
+
+  const forbiddenPatterns = [
+    /--/,
+    /;/,
+    /\/\*/,
+    /\*\//,
+    /xp_/i,
+    /drop\s+/i,
+    /select\s+/i,
+    /insert\s+/i,
+    /delete\s+/i,
+    /update\s+/i,
+    /or\s+1=1/i,
+    /union\s+/i
+  ]
+
+  return !forbiddenPatterns.some(pattern => pattern.test(value))
+}
+
 export default function EquipmentsPage() {
 
   const router = useRouter()
@@ -52,7 +80,21 @@ export default function EquipmentsPage() {
 
     e.preventDefault()
 
-    if (!name) return
+    const sanitizedName = sanitizeInput(name)
+    const sanitizedLocation = sanitizeInput(location)
+
+    if (!sanitizedName) {
+      alert('Informe o nome do equipamento')
+      return
+    }
+
+    if (
+      !isValidInput(sanitizedName) ||
+      !isValidInput(sanitizedLocation)
+    ) {
+      alert('Caracteres inválidos detectados.')
+      return
+    }
 
     const { data: userData } = await supabase.auth.getUser()
 
@@ -60,8 +102,8 @@ export default function EquipmentsPage() {
       .from('equipments')
       .insert([
         {
-          name,
-          location,
+          name: sanitizedName,
+          location: sanitizedLocation,
           maintenance_interval_months: Number(interval),
           user_id: userData.user?.id
         }
@@ -149,16 +191,20 @@ export default function EquipmentsPage() {
         <input
           placeholder="Nome do equipamento"
           value={name}
-          maxlength="50"
-          onChange={(e) => setName(e.target.value)}
+          maxLength={50}
+          onChange={(e) =>
+            setName(sanitizeInput(e.target.value))
+          }
           style={{ padding: 8 }}
         />
 
         <input
           placeholder="Localização"
           value={location}
-          maxlength="50"
-          onChange={(e) => setLocation(e.target.value)}
+          maxLength={50}
+          onChange={(e) =>
+            setLocation(sanitizeInput(e.target.value))
+          }
           style={{ padding: 8 }}
         />
 
