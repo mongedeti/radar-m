@@ -149,6 +149,7 @@ export default function EquipmentsPage() {
         <input
           placeholder="Nome do equipamento"
           value={name}
+          maxlength="50"
           onChange={(e) => setName(e.target.value)}
           style={{ padding: 8 }}
         />
@@ -156,6 +157,7 @@ export default function EquipmentsPage() {
         <input
           placeholder="Localização"
           value={location}
+          maxlength="50"
           onChange={(e) => setLocation(e.target.value)}
           style={{ padding: 8 }}
         />
