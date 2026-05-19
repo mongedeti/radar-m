@@ -15,8 +15,16 @@ type Equipment = {
 function sanitizeInput(value: string) {
 
   return value
+    // remove tags html completas
+    .replace(/<[^>]*>?/gm, '')
+
+    // remove caracteres perigosos
     .replace(/[^\p{L}\p{N}\s\-.,()/]/gu, '')
+
+    // remove múltiplos espaços
     .replace(/\s+/g, ' ')
+
+    // trim
     .trim()
 }
 
@@ -34,7 +42,16 @@ function isValidInput(value: string) {
     /delete\s+/i,
     /update\s+/i,
     /or\s+1=1/i,
-    /union\s+/i
+    /union\s+/i,
+
+    // XSS
+    /<script/i,
+    /javascript:/i,
+    /onerror=/i,
+    /onload=/i,
+    /iframe/i,
+    /document\./i,
+    /window\./i,
   ]
 
   return !forbiddenPatterns.some(pattern => pattern.test(value))
